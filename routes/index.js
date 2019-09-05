@@ -46,17 +46,27 @@ router.post('/users', async function (req, res, next) {
 
 router.post('/enter', async function (req, res, next) {
     const imageBuffer = images.decodeBase64Image(req.body.image);
-    images.writeToFile(imageBuffer.data, 'file');
+    images.writeToFile(imageBuffer.data, 'file.png');
 
     // Load models
     await faceRecognition.loadModels('../public/models');
-    const img = await canvas.loadImage(path.join(__dirname, `../public/images/${name}.png`));
-
+    const img = await images.buildCanvasFromImage('file.png');
     // detect the faces with landmarks
     const results = await faceapi.detectSingleFace(img).withFaceLandmarks().withFaceDescriptor();
     if (results !== undefined) {
-        const descriptors = results.descriptor.join(',');
-
+        const descriptors = results.descriptor;
+        console.log(descriptors)
+        // Get all image descriptors from the db
+        db.all('image_descriptors', ['*']).then((existingDescriptors) => {
+            const mappedDescriptors = existingDescriptors.map(
+              entry => new Float32Array(entry.descriptors.split(','))
+            );
+            const distance = faceRecognition.computeSmallestEuclideanDistance(descriptors, mappedDescriptors);
+            console.log(distance)
+        });
+        // Compute the euclidean distance to each of them
+        // Take the minimum distance
+        // Check whether it exceeds threshold
         return res.json(200);
     }
     return res.json(404);

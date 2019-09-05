@@ -22,6 +22,19 @@ function insert(table, content) {
     }))
 }
 
+function all(table, columns) {
+    return new Promise((resolve, reject) => {
+       const columnKeys = columns.join(',');
+       connection.query(`select ${columnKeys} from ${table}`, (err, result, fields) => {
+           if (err) {
+               reject(err);
+           } else {
+               resolve(result);
+           }
+       })
+    });
+}
+
 function generatePreparedStatementPlaceholders(values) {
     let placeholders = '';
     for (let i = 0; i < values.length; i++) {
@@ -35,6 +48,7 @@ function generatePreparedStatementPlaceholders(values) {
 
 module.exports = {
     connection,
-    insert
+    insert,
+    all
 };
 
