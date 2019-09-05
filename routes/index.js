@@ -2,16 +2,15 @@ var canvas = require("canvas");
 var faceapi = require('face-api.js');
 
 var express = require('express');
-var decodeBase64Image = require('../http/images');
+var images = require('../http/images');
 var router = express.Router();
 var path = require('path');
 var fs = require('fs');
-var db = require('../db/db.js');
+var db = require('../db/db');
+var faceRecognition = require('../lib/face-recognition');
 
 const { Canvas, Image, ImageData } = canvas;
 faceapi.env.monkeyPatch({ Canvas, Image, ImageData });
-
-const faceDetectionNet = faceapi.nets.ssdMobilenetv1;
 
 /* GET home page. */
 router.get('/', function (req, res, next) {
@@ -22,14 +21,10 @@ router.post('/users', async function (req, res, next) {
     let name = req.body.name;
     let img64 = req.body.image;
 
-    const imageBuffer = decodeBase64Image(img64);
-    fs.writeFile(path.join(__dirname, `../public/images/${name}.png`), imageBuffer.data, function (err) {
-        console.log(err);
-    });
-    await faceDetectionNet.loadFromDisk(path.join(__dirname, '../public/models'));
-    await faceapi.nets.faceLandmark68Net.loadFromDisk(path.join(__dirname, '../public/models'));
-    await faceapi.nets.faceRecognitionNet.loadFromDisk(path.join(__dirname, '../public/models'));
+    const imageBuffer = images.decodeBase64Image(img64);
+    images.writeToFile(imageBuffer.data, name);
 
+    await faceRecognition.loadModels('../public/models');
     const img = await canvas.loadImage(path.join(__dirname, `../public/images/${name}.png`));
 
     // detect the faces with landmarks
@@ -49,42 +44,23 @@ router.post('/users', async function (req, res, next) {
     return res.json(404);
 });
 
-router.post('/entry', function (req, res, next) {
+router.post('/enter', async function (req, res, next) {
+    const imageBuffer = images.decodeBase64Image(req.body.image);
+    images.writeToFile(imageBuffer.data, 'file');
 
+    // Load models
+    await faceRecognition.loadModels('../public/models');
+    const img = await canvas.loadImage(path.join(__dirname, `../public/images/${name}.png`));
+
+    // detect the faces with landmarks
+    const results = await faceapi.detectSingleFace(img).withFaceLandmarks().withFaceDescriptor();
+    if (results !== undefined) {
+        const descriptors = results.descriptor.join(',');
+
+        return res.json(200);
+    }
+    return res.json(404);
 });
-
-function getNrOfImagesForUser(name) {
-    db.query('select count(*) as nrOfImages from  images join users on images.user_id = users.id where users.name = ?', name, (err, result) => {
-        if (err) {
-            console.log(err);
-        } else {
-            nrOfImages = result[0].nrOfImages;
-            console.log(result[0].nrOfImages);
-        }
-    });
-}
-
-function insertImage(userId, filename, descriptors) {
-    db.query('insert into images(user_id, filename) values(?, ?)',
-        [userId, filename],
-        (err, result) => {
-            if (err) {
-                console.log(err);
-            } else {
-                insertDescriptor(result.insertId, descriptors);
-            }
-        });
-}
-
-function insertDescriptor(imageId, descriptors) {
-    db.query('insert into image_descriptors(image_id, descriptors) values(?, ?)',
-        [imageId, descriptors],
-        (err, result) => {
-            if (err) {
-                console.log(err);
-            }
-        });
-}
 
 /*function getFaceDetectorOptions() {
     return net === faceapi.nets.ssdMobilenetv1

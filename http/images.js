@@ -1,5 +1,8 @@
+const fs = require('fs');
+const path = require('path');
+
 function decodeBase64Image(dataString) {
-    var matches = dataString.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/),
+    const matches = dataString.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/),
         response = {};
 
     if (matches.length !== 3) {
@@ -12,4 +15,13 @@ function decodeBase64Image(dataString) {
     return response;
 }
 
-module.exports = decodeBase64Image;
+function writeToFile(imageData, fileName) {
+    fs.writeFile(path.join(__dirname, `../public/images/${fileName}.png`), imageData, function (err) {
+        console.log(err);
+    });
+}
+
+module.exports = {
+    decodeBase64Image,
+    writeToFile
+};
