@@ -6,3 +6,8 @@ body {
 a {
   color: #00B7FF;
 }
+
+.image-upload {
+  display: block;
+  padding: 10px 0;
+}
