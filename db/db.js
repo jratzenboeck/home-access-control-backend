@@ -36,14 +36,7 @@ function all(table, columns) {
 }
 
 function generatePreparedStatementPlaceholders(values) {
-    let placeholders = '';
-    for (let i = 0; i < values.length; i++) {
-        placeholders += '?';
-        if (i < values.length - 1) {
-            placeholders += ','
-        }
-    }
-    return placeholders;
+    return values.map(value => '?').join(',');
 }
 
 module.exports = {
