@@ -69,6 +69,12 @@ router.post('/enter', async function (req, res, next) {
   }
 })
 
+router.get('/users', function (req, res, next) {
+  db.all('users', ['name']).then((result) => {
+    return res.json({ users: result.map(user => user.name) })
+  }).catch((error) => res.status(500).json({error}));
+});
+
 function computeDistance (descriptors, existingDescriptors) {
   return new Promise((resolve, reject) => {
     const mappedDescriptors = existingDescriptors.map(
