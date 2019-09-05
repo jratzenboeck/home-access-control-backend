@@ -34,7 +34,7 @@ server.on('listening', onListening);
  * Setup database.
  */
 
-db.connect();
+db.connection.connect();
 
 /**
  * Normalize a port into a number, string, or false.
