@@ -24,14 +24,26 @@ function insert(table, content) {
 
 function all(table, columns) {
     return new Promise((resolve, reject) => {
-       const columnKeys = columns.join(',');
-       connection.query(`select ${columnKeys} from ${table}`, (err, result, fields) => {
-           if (err) {
-               reject(err);
-           } else {
-               resolve(result);
-           }
-       })
+        const columnKeys = columns.join(',');
+        connection.query(`select ${columnKeys} from ${table}`, (err, result, fields) => {
+            if (err) {
+                reject(err);
+            } else {
+                resolve(result);
+            }
+        })
+    });
+}
+
+function getNrOfUserImages(username) {
+    return new Promise((resolve, reject) => {
+        connection.query('select count(*) as nrOfImages, users.id from  images join users on images.user_id = users.id where users.name = ? group by users.id', username, (err, result, fields) => {
+            if (err) {
+                reject(err);
+            } else {
+                resolve(result);
+            }
+        })
     });
 }
 
@@ -42,6 +54,7 @@ function generatePreparedStatementPlaceholders(values) {
 module.exports = {
     connection,
     insert,
-    all
+    all,
+    getNrOfUserImages
 };
 

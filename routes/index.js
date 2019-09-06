@@ -9,23 +9,32 @@ const faceRecognition = require('../lib/face-recognition')
 const multer = require('multer')
 const upload = multer({storage: images.initMulter()})
 
-const {Canvas, Image, ImageData} = canvas
-faceapi.env.monkeyPatch({Canvas, Image, ImageData})
+const { Canvas, Image, ImageData } = canvas
+faceapi.env.monkeyPatch({ Canvas, Image, ImageData })
 
 /* GET home page. */
 router.get('/', function (req, res, next) {
-  res.render('index')
+    res.render('index')
 })
 
 router.post('/users', async function (req, res, next) {
-  let name = req.body.name
-  let img64 = req.body.image
+    let name = req.body.name
+    let img64 = req.body.image
+    const result = await db.getNrOfUserImages(name)
+    let nrOfImagesForUser = 0
+    let userId = undefined
+    if (result.length > 0) {
+        nrOfImagesForUser = result[0].nrOfImages
+        userId = result[0].id
+    }
 
-  const imageBuffer = images.decodeBase64Image(img64)
-  images.writeToFile(imageBuffer.data, `${name}.png`)
+    let filename = `${name}${nrOfImagesForUser + 1}.png`
 
-  await faceRecognition.loadModels('../public/models')
-  const img = await images.buildCanvasFromImage(`${name}.png`)
+    const imageBuffer = images.decodeBase64Image(img64)
+    images.writeToFile(imageBuffer.data, filename)
+
+    await faceRecognition.loadModels('../public/models')
+    const img = await images.buildCanvasFromImage(filename)
 
   // detect the faces with landmarks
   const results = await faceRecognition.detectFace(img)
@@ -33,14 +42,23 @@ router.post('/users', async function (req, res, next) {
     const descriptors = results.descriptor
     const descriptorStr = descriptors.join(',')
 
-    db.insert('users', {name})
-      .then((userId) =>
-        db.insert('images', {user_id: userId, filename: `${name}.png`}))
-      .then((imageId) =>
-        db.insert('image_descriptors', {image_id: imageId, descriptors: descriptorStr}))
-      .then(() => {
-        return res.json(200)
-      })
+      if (userId === undefined) {
+          db.insert('users', { name })
+              .then((userId) =>
+                  db.insert('images', { user_id: userId, filename: filename }))
+              .then((imageId) =>
+                  db.insert('image_descriptors', { image_id: imageId, descriptors: descriptorStr }))
+              .then(() => {
+                  return res.json(200);
+              })
+      } else {
+          db.insert('images', { user_id: userId, filename: filename })
+              .then((imageId) =>
+                  db.insert('image_descriptors', { image_id: imageId, descriptors: descriptorStr }))
+              .then(() => {
+                  return res.json(200);
+              })
+      }
   } else {
     return res.status(400).json({error: 'No image detected'})
   }
@@ -68,19 +86,19 @@ router.post('/enter', upload.single('image'), async function (req, res, next) {
 })
 
 router.get('/users', function (req, res, next) {
-  db.all('users', ['name']).then((result) => {
-    return res.json({users: result.map(user => user.name)})
-  }).catch((error) => res.status(500).json({error}))
+    db.all('users', ['name']).then((result) => {
+        return res.json({ users: result.map(user => user.name) })
+    }).catch((error) => res.status(500).json({ error }))
 })
 
-function computeDistance (descriptors, existingDescriptors) {
-  return new Promise((resolve, reject) => {
-    const mappedDescriptors = existingDescriptors.map(
-      entry => new Float32Array(entry.descriptors.split(','))
-    )
-    const distance = faceRecognition.computeSmallestEuclideanDistance(descriptors, mappedDescriptors)
-    resolve(distance)
-  })
+function computeDistance(descriptors, existingDescriptors) {
+    return new Promise((resolve, reject) => {
+        const mappedDescriptors = existingDescriptors.map(
+            entry => new Float32Array(entry.descriptors.split(','))
+        )
+        const distance = faceRecognition.computeSmallestEuclideanDistance(descriptors, mappedDescriptors)
+        resolve(distance)
+    })
 }
 
 module.exports = router
