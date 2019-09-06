@@ -1,15 +1,13 @@
-var canvas = require('canvas')
-var faceapi = require('face-api.js')
+const canvas = require('canvas')
+const faceapi = require('face-api.js')
 
-var express = require('express')
-var images = require('../http/images')
-var router = express.Router()
-var path = require('path')
-var fs = require('fs')
-var db = require('../db/db')
-var faceRecognition = require('../lib/face-recognition')
-var multer = require('multer')
-var upload = multer({storage: images.initMulter()})
+const express = require('express')
+const images = require('../http/images')
+const router = express.Router()
+const db = require('../db/db')
+const faceRecognition = require('../lib/face-recognition')
+const multer = require('multer')
+const upload = multer({storage: images.initMulter()})
 
 const {Canvas, Image, ImageData} = canvas
 faceapi.env.monkeyPatch({Canvas, Image, ImageData})
@@ -30,7 +28,7 @@ router.post('/users', async function (req, res, next) {
   const img = await images.buildCanvasFromImage(`${name}.png`)
 
   // detect the faces with landmarks
-  const results = await faceapi.detectSingleFace(img).withFaceLandmarks().withFaceDescriptor()
+  const results = await faceRecognition.detectFace(img)
   if (results !== undefined) {
     const descriptors = results.descriptor
     const descriptorStr = descriptors.join(',')
@@ -41,10 +39,10 @@ router.post('/users', async function (req, res, next) {
       .then((imageId) =>
         db.insert('image_descriptors', {image_id: imageId, descriptors: descriptorStr}))
       .then(() => {
-        return res.json(200);
+        return res.json(200)
       })
   } else {
-    return res.status(400).json({error: 'No image detected'});
+    return res.status(400).json({error: 'No image detected'})
   }
 })
 
@@ -53,7 +51,8 @@ router.post('/enter', upload.single('image'), async function (req, res, next) {
   await faceRecognition.loadModels('../public/models')
   const img = await images.buildCanvasFromImage(req.file.originalname)
   // detect the faces with landmarks
-  const results = await faceapi.detectSingleFace(img).withFaceLandmarks().withFaceDescriptor()
+  const results = await faceRecognition.detectFace(img)
+
   if (results !== undefined) {
     const descriptors = results.descriptor
     // Get all image descriptors from the db
@@ -64,7 +63,7 @@ router.post('/enter', upload.single('image'), async function (req, res, next) {
       })
     })
   } else {
-    return res.status(400).json({error: 'No image detected'});
+    return res.status(400).render('authenticated', {authenticationStatus: 'No face detected in the image'})
   }
 })
 
