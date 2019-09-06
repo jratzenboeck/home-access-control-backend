@@ -64,7 +64,7 @@ router.post('/enter', upload.single('image'), async function (req, res, next) {
       })
     })
   } else {
-    return res.json(404)
+    return res.status(400).json({error: 'No image detected'});
   }
 })
 
@@ -84,12 +84,4 @@ function computeDistance (descriptors, existingDescriptors) {
   })
 }
 
-/*function getFaceDetectorOptions() {
-    return net === faceapi.nets.ssdMobilenetv1
-        ? new faceapi.SsdMobilenetv1Options({ minConfidence })
-        : (net === faceapi.nets.tinyFaceDetector
-                ? new faceapi.TinyFaceDetectorOptions({ inputSize, scoreThreshold })
-                : new faceapi.MtcnnOptions({ minFaceSize, scaleFactor })
-        )
-}*/
 module.exports = router
