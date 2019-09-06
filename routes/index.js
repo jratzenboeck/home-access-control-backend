@@ -8,6 +8,8 @@ var path = require('path')
 var fs = require('fs')
 var db = require('../db/db')
 var faceRecognition = require('../lib/face-recognition')
+var multer = require('multer')
+var upload = multer({storage: images.initMulter()})
 
 const {Canvas, Image, ImageData} = canvas
 faceapi.env.monkeyPatch({Canvas, Image, ImageData})
@@ -44,13 +46,10 @@ router.post('/users', async function (req, res, next) {
   return res.json(404)
 })
 
-router.post('/enter', async function (req, res, next) {
-  const imageBuffer = images.decodeBase64Image(req.body.image)
-  images.writeToFile(imageBuffer.data, 'file.png')
-
+router.post('/enter', upload.single('image'), async function (req, res, next) {
   // Load models
   await faceRecognition.loadModels('../public/models')
-  const img = await images.buildCanvasFromImage('file.png')
+  const img = await images.buildCanvasFromImage(req.file.originalname)
   // detect the faces with landmarks
   const results = await faceapi.detectSingleFace(img).withFaceLandmarks().withFaceDescriptor()
   if (results !== undefined) {
@@ -58,7 +57,8 @@ router.post('/enter', async function (req, res, next) {
     // Get all image descriptors from the db
     db.all('image_descriptors', ['*']).then((existingDescriptors) => {
       computeDistance(descriptors, existingDescriptors).then((distance) => {
-        return res.json({authenticated: distance <= 0.5})
+        const authenticationStatus = distance <= 0.5 ? 'You are authenticated' : 'You are not authenticated'
+        return res.render('authenticated', {authenticationStatus})
       })
     })
     // Compute the euclidean distance to each of them
@@ -71,9 +71,9 @@ router.post('/enter', async function (req, res, next) {
 
 router.get('/users', function (req, res, next) {
   db.all('users', ['name']).then((result) => {
-    return res.json({ users: result.map(user => user.name) })
-  }).catch((error) => res.status(500).json({error}));
-});
+    return res.json({users: result.map(user => user.name)})
+  }).catch((error) => res.status(500).json({error}))
+})
 
 function computeDistance (descriptors, existingDescriptors) {
   return new Promise((resolve, reject) => {

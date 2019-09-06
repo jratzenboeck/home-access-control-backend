@@ -9,9 +9,12 @@
 <h1>Face Detection door</h1>
 <p>Please upload an image to get authenticated</p>
 
-<input name="image" type="file" size="50" class="image-upload">
+<form method="post" action="/enter" enctype="multipart/form-data">
+    <input id="picture" name="image" type="file" size="50" class="image-upload">
+    <button id="submit" type="submit">Submit</button>
+</form>
 
-<button type="button">Submit</button>
+<!--<script src="javascripts/door.js" defer></script>-->
 </body>
 
 </html>

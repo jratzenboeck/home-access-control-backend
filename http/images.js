@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const canvas = require('canvas');
+const multer = require('multer');
 
 function decodeBase64Image(dataString) {
     const matches = dataString.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/),
@@ -30,8 +31,20 @@ function buildImagePath(filename) {
     return path.join(__dirname, `../public/images/${filename}`)
 }
 
+function initMulter() {
+    return multer.diskStorage({
+        destination: function (req, file, cb) {
+            cb(null, path.join(__dirname, '../public/images'));
+        },
+        filename: function (req, file, cb) {
+            cb(null, file.originalname);
+        }
+    })
+}
+
 module.exports = {
     decodeBase64Image,
     writeToFile,
     buildCanvasFromImage,
+    initMulter
 };

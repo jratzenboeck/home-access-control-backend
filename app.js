@@ -9,6 +9,8 @@ const bodyParser = require('body-parser');
 var indexRouter = require('./routes/index');
 
 var app = express();
+app.set('views', './views') // specify the views directory
+app.set('view engine', 'ejs') // register the template engine
 
 app.use(logger('dev'));
 app.use(bodyParser({ limit: '50mb' }));
