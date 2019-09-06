@@ -40,10 +40,12 @@ router.post('/users', async function (req, res, next) {
         db.insert('images', {user_id: userId, filename: `${name}.png`}))
       .then((imageId) =>
         db.insert('image_descriptors', {image_id: imageId, descriptors: descriptorStr}))
-
-    return res.json(200)
+      .then(() => {
+        return res.json(200);
+      })
+  } else {
+    return res.status(400).json({error: 'No image detected'});
   }
-  return res.json(404)
 })
 
 router.post('/enter', upload.single('image'), async function (req, res, next) {
@@ -61,9 +63,6 @@ router.post('/enter', upload.single('image'), async function (req, res, next) {
         return res.render('authenticated', {authenticationStatus})
       })
     })
-    // Compute the euclidean distance to each of them
-    // Take the minimum distance
-    // Check whether it exceeds threshold
   } else {
     return res.json(404)
   }
